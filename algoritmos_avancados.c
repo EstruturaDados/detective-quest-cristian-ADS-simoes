@@ -2,46 +2,54 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define TAM_HASH 10
+
 // --- ESTRUTURAS ---
 
-// Árvore Binária do Mapa
 typedef struct Sala {
     char nome[50];
-    char pista[30]; // Pista que existe nesta sala
+    char pista[30];
     struct Sala *esquerda, *direita;
 } Sala;
 
-// Árvore de Busca Binária (BST) para o Inventário de Pistas
-typedef struct Pista {
-    char descricao[30];
-    struct Pista *esq, *dir;
-} Pista;
+typedef struct {
+    char pista[30];
+    char suspeito[30];
+} HashEntry;
 
-// --- FUNÇÕES DE PISTAS (BST) ---
+HashEntry tabelaHash[TAM_HASH];
 
-Pista* inserirPista(Pista* raiz, char* descricao) {
-    if (raiz == NULL) {
-        Pista* novo = (Pista*)malloc(sizeof(Pista));
-        strcpy(novo->descricao, descricao);
-        novo->esq = novo->dir = NULL;
-        return novo;
-    }
-    if (strcmp(descricao, raiz->descricao) < 0)
-        raiz->esq = inserirPista(raiz->esq, descricao);
-    else if (strcmp(descricao, raiz->descricao) > 0)
-        raiz->dir = inserirPista(raiz->dir, descricao);
-    return raiz;
+// --- FUNÇÕES DE HASH (Mestre) ---
+
+// Função simples: soma os valores ASCII e tira o módulo
+int calcularHash(char* str) {
+    int soma = 0;
+    for (int i = 0; str[i] != '\0'; i++) soma += str[i];
+    return soma % TAM_HASH;
 }
 
-void exibirPistasEmOrdem(Pista* raiz) {
-    if (raiz != NULL) {
-        exibirPistasEmOrdem(raiz->esq);
-        printf("- %s\n", raiz->descricao);
-        exibirPistasEmOrdem(raiz->dir);
+void inserirNaHash(char* pista, char* suspeito) {
+    int indice = calcularHash(pista);
+    // Tratamento de colisão linear simples
+    while (strlen(tabelaHash[indice].pista) > 0) {
+        indice = (indice + 1) % TAM_HASH;
     }
+    strcpy(tabelaHash[indice].pista, pista);
+    strcpy(tabelaHash[indice].suspeito, suspeito);
 }
 
-// --- FUNÇÕES DO MAPA ---
+char* buscarSuspeito(char* pista) {
+    int indice = calcularHash(pista);
+    int inicial = indice;
+    do {
+        if (strcmp(tabelaHash[indice].pista, pista) == 0)
+            return tabelaHash[indice].suspeito;
+        indice = (indice + 1) % TAM_HASH;
+    } while (indice != inicial);
+    return "Desconhecido";
+}
+
+// --- FUNÇÕES DE JOGO ---
 
 Sala* criarSala(char* nome, char* pista) {
     Sala* nova = (Sala*)malloc(sizeof(Sala));
@@ -51,46 +59,68 @@ Sala* criarSala(char* nome, char* pista) {
     return nova;
 }
 
-Sala* montarMansao() {
-    Sala* hall = criarSala("Hall de Entrada", "Nenhuma");
-    hall->esquerda = criarSala("Sala de Estar", "Chave Antiga");
-    hall->direita = criarSala("Cozinha", "Faca de Pao");
-    hall->esquerda->esquerda = criarSala("Biblioteca", "Diario Secreto");
-    hall->direita->direita = criarSala("Adega", "Garrafa Quebrada");
-    return hall;
+void inicializarCaso() {
+    for (int i = 0; i < TAM_HASH; i++) strcpy(tabelaHash[i].pista, "");
+    
+    // Relacionando Pistas a Suspeitos na Hash
+    inserirNaHash("Chave Antiga", "Mordomo");
+    inserirNaHash("Faca de Pao", "Cozinheiro");
+    inserirNaHash("Diario Secreto", "Mordomo");
+    inserirNaHash("Garrafa Quebrada", "Jardineiro");
 }
 
-void explorar(Sala* mapa) {
-    Sala* atual = mapa;
-    Pista* inventario = NULL;
-    char escolha;
+void finalizarInvestigacao(char pistasEncontradas[][30], int total) {
+    printf("\n--- ⚖️ RELATÓRIO FINAL DA ENIGMA STUDIOS ---\n");
+    int contMordomo = 0, contCozinheiro = 0, contJardineiro = 0;
 
-    while (atual != NULL) {
-        printf("\n📍 Local atual: %s", atual->nome);
+    for (int i = 0; i < total; i++) {
+        char* suspeito = buscarSuspeito(pistasEncontradas[i]);
+        printf("Pista: %-15s -> Suspeito: %s\n", pistasEncontradas[i], suspeito);
         
-        // Coleta automática de pista se houver
-        if (strcmp(atual->pista, "Nenhuma") != 0) {
-            printf("\n🔍 Voce encontrou uma pista: %s!", atual->pista);
-            inventario = inserirPista(inventario, atual->pista);
-        }
-
-        printf("\n\n1. Ir para Esquerda | 2. Ir para Direita | 3. Ver Inventario de Pistas | 0. Sair\nEscolha: ");
-        scanf(" %c", &escolha);
-
-        if (escolha == '0') break;
-        else if (escolha == '1' && atual->esquerda) atual = atual->esquerda;
-        else if (escolha == '2' && atual->direita) atual = atual->direita;
-        else if (escolha == '3') {
-            printf("\n--- 📂 INVENTARIO (ORDEM ALFABETICA) ---\n");
-            if (inventario == NULL) printf("Vazio.\n");
-            else exibirPistasEmOrdem(inventario);
-        } else printf("\nCaminho sem saida ou opcao invalida!");
+        if (strcmp(suspeito, "Mordomo") == 0) contMordomo++;
+        else if (strcmp(suspeito, "Cozinheiro") == 0) contCozinheiro++;
+        else if (strcmp(suspeito, "Jardineiro") == 0) contJardineiro++;
     }
+
+    printf("\n--- CONCLUSÃO ---");
+    if (contMordomo > contCozinheiro && contMordomo > contJardineiro)
+        printf("\nO CULPADO É: O MORDOMO (Mais evidências encontradas)!\n");
+    else
+        printf("\nEvidências insuficientes para uma acusação direta.\n");
 }
 
 int main() {
-    srand(0);
-    Sala* mansao = montarMansao();
-    explorar(mansao);
+    inicializarCaso();
+    
+    // Montagem do Mapa
+    Sala* hall = criarSala("Hall", "Nenhuma");
+    hall->esquerda = criarSala("Sala de Estar", "Chave Antiga");
+    hall->direita = criarSala("Cozinha", "Faca de Pao");
+    hall->esquerda->esquerda = criarSala("Biblioteca", "Diario Secreto");
+    
+    Sala* atual = hall;
+    char pistasAchadas[10][30];
+    int nPistas = 0;
+    char escolha;
+
+    printf("🕵️ Detective Quest: Resolva o Crime!\n");
+
+    while (atual != NULL) {
+        printf("\n📍 Local: %s", atual->nome);
+        if (strcmp(atual->pista, "Nenhuma") != 0) {
+            printf("\n🔍 Pista coletada: %s", atual->pista);
+            strcpy(pistasAchadas[nPistas++], atual->pista);
+        }
+
+        printf("\n1. Esquerda | 2. Direita | 0. Encerrar e Acusar\nEscolha: ");
+        scanf(" %c", &escolha);
+
+        if (escolha == '0') break;
+        if (escolha == '1' && atual->esquerda) atual = atual->esquerda;
+        else if (escolha == '2' && atual->direita) atual = atual->direita;
+        else printf("\nCaminho bloqueado!");
+    }
+
+    finalizarInvestigacao(pistasAchadas, nPistas);
     return 0;
 }
