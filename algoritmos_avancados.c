@@ -1,47 +1,80 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-// Desafio Detective Quest
-// Tema 4 - Árvores e Tabela Hash
-// Este código inicial serve como base para o desenvolvimento das estruturas de navegação, pistas e suspeitos.
-// Use as instruções de cada região para desenvolver o sistema completo com árvore binária, árvore de busca e tabela hash.
+// Estrutura que representa uma sala (nó da árvore)
+typedef struct Sala {
+    char nome[50];
+    struct Sala *esquerda;
+    struct Sala *direita;
+} Sala;
+
+// Função para criar uma nova sala
+Sala* criarSala(char* nome) {
+    Sala* novaSala = (Sala*)malloc(sizeof(Sala));
+    strcpy(novaSala->nome, nome);
+    novaSala->esquerda = NULL;
+    novaSala->direita = NULL;
+    return novaSala;
+}
+
+// Função para montar o mapa da mansão (Árvore Binária Estática)
+Sala* montarMansao() {
+    // Nível 0: Raiz
+    Sala* hall = criarSala("Hall de Entrada");
+
+    // Nível 1
+    hall->esquerda = criarSala("Sala de Estar");
+    hall->direita = criarSala("Cozinha");
+
+    // Nível 2 (Folhas)
+    hall->esquerda->esquerda = criarSala("Biblioteca (Fim)");
+    hall->esquerda->direita = criarSala("Jardim de Inverno (Fim)");
+    hall->direita->esquerda = criarSala("Despensa (Fim)");
+    hall->direita->direita = criarSala("Adega (Fim)");
+
+    return hall;
+}
+
+// Função de exploração interativa
+void explorarMansao(Sala* atual) {
+    char escolha;
+
+    while (atual != NULL) {
+        printf("\nVocê está no(a): %s", atual->nome);
+
+        // Se for um nó-folha (sem saídas), a exploração termina
+        if (atual->esquerda == NULL && atual->direita == NULL) {
+            printf("\nVocê chegou ao fim deste caminho.\n");
+            break;
+        }
+
+        printf("\nPara onde deseja ir? (e - Esquerda / d - Direita / s - Sair): ");
+        scanf(" %c", &escolha);
+
+        if (escolha == 's') {
+            printf("Saindo da investigação...\n");
+            break;
+        } else if (escolha == 'e') {
+            if (atual->esquerda != NULL) atual = atual->esquerda;
+            else printf("Caminho bloqueado!\n");
+        } else if (escolha == 'd') {
+            if (atual->direita != NULL) atual = atual->direita;
+            else printf("Caminho bloqueado!\n");
+        } else {
+            printf("Opção inválida!\n");
+        }
+    }
+}
 
 int main() {
+    printf("--- 🕵️ DETECTIVE QUEST: O MISTÉRIO DA MANSÃO ---\n");
+    
+    // Montagem da estrutura
+    Sala* mansao = montarMansao();
 
-    // 🌱 Nível Novato: Mapa da Mansão com Árvore Binária
-    //
-    // - Crie uma struct Sala com nome, e dois ponteiros: esquerda e direita.
-    // - Use funções como criarSala(), conectarSalas() e explorarSalas().
-    // - A árvore pode ser fixa: Hall de Entrada, Biblioteca, Cozinha, Sótão etc.
-    // - O jogador deve poder explorar indo à esquerda (e) ou à direita (d).
-    // - Finalize a exploração com uma opção de saída (s).
-    // - Exiba o nome da sala a cada movimento.
-    // - Use recursão ou laços para caminhar pela árvore.
-    // - Nenhuma inserção dinâmica é necessária neste nível.
-
-    // 🔍 Nível Aventureiro: Armazenamento de Pistas com Árvore de Busca
-    //
-    // - Crie uma struct Pista com campo texto (string).
-    // - Crie uma árvore binária de busca (BST) para inserir as pistas coletadas.
-    // - Ao visitar salas específicas, adicione pistas automaticamente com inserirBST().
-    // - Implemente uma função para exibir as pistas em ordem alfabética (emOrdem()).
-    // - Utilize alocação dinâmica e comparação de strings (strcmp) para organizar.
-    // - Não precisa remover ou balancear a árvore.
-    // - Use funções para modularizar: inserirPista(), listarPistas().
-    // - A árvore de pistas deve ser exibida quando o jogador quiser revisar evidências.
-
-    // 🧠 Nível Mestre: Relacionamento de Pistas com Suspeitos via Hash
-    //
-    // - Crie uma struct Suspeito contendo nome e lista de pistas associadas.
-    // - Crie uma tabela hash (ex: array de ponteiros para listas encadeadas).
-    // - A chave pode ser o nome do suspeito ou derivada das pistas.
-    // - Implemente uma função inserirHash(pista, suspeito) para registrar relações.
-    // - Crie uma função para mostrar todos os suspeitos e suas respectivas pistas.
-    // - Adicione um contador para saber qual suspeito foi mais citado.
-    // - Exiba ao final o “suspeito mais provável” baseado nas pistas coletadas.
-    // - Para hashing simples, pode usar soma dos valores ASCII do nome ou primeira letra.
-    // - Em caso de colisão, use lista encadeada para tratar.
-    // - Modularize com funções como inicializarHash(), buscarSuspeito(), listarAssociacoes().
+    // Início do jogo
+    explorarMansao(mansao);
 
     return 0;
 }
-
